@@ -25,89 +25,94 @@ extern "C"
 #else
 #define DEBUG_PRINTF(...) (void)0 // Приведение 0 к типу void, ничего не делает
 #endif
-    // ********************************************************************************************************
-
-    //*********************************************************************
-    struct motorStruct // Структура для локального управления и сбора данных по моторам
-    {
-        int status;                // Передаются импульсы на мотор или нет в данный момент, вращается или нет
-        int position;              // Текущая позиция в импульсах
-        int destination;           // Цель назначение в позиции в импульсах
-        int dir;                   // Направление вращения мотора 1 - по часовой 0 - против часовой
-        float angle;               // Углы в которые нужно повернультя в локальной системе
-        GPIO_TypeDef *dir_port;    // Пин определяющий направление вращения
-        uint16_t dir_pin;          // Пин определяющий направление вращения
-        GPIO_TypeDef *step_port;   // Пин определяющий импульс
-        uint16_t step_pin;         // Пин определяющий импульс
-        GPIO_TypeDef *micric_port; // Пин определяющий концевик
-        int micric_pin;            // Пин определяющий концевик
-    };
-    struct motorStruct motor; // Все локальные данные по моторам
-
-    //*********************************************************************
-    // Структура получаемых данных от Data к контроллеру Print
-    struct SControlPrint
-    {
-        uint32_t status;    // Текущий режим работы 0 - не печатем, 1 печатаем
-        uint32_t mode;      // Текущий режим работы какеи сопла печатют
-        uint32_t intensity; // ИНтенсивность печати. Сколько раз прыскаем на 1 мм
-        float speed;        // Текущая скорость движения при которой надо печатать. От нее зависит интервал между выпрыскиванием чернил
-    };
-
-    // Структура получаемых данных из Data к Print
-    struct Struct_Data2Print
-    {
-        uint32_t id;                       // Id команды
-        struct SControlPrint controlPrint; // Режим печати
-        uint32_t cheksum;                  // Контрольная сумма данных в структуре
-    };
-
-    struct Struct_Data2Print Data2Print_receive;                               // Экземпляр структуры получаемых данных
-    struct SControlPrint controlPrint;                                         // Управление всей печатью
-    static const uint16_t size_structura_receive = sizeof(Data2Print_receive); // Размер структуры с данными которые получаем
-
-    //*********************************************************************
-    // Структура по состоянию лидаров которая передается на верхний уровень
-
-    struct SFirmwarePrint
-    {
-        uint8_t gen;   // Поколение
-        uint8_t ver;   // Версия
-        uint8_t debug; // Вариант использования отладки для вывода в printf
-        uint8_t test;  // Вариант использования отладки для вывода в printf
-    };
-
+    //****************************************************************************************************************************************************
     // Структура по обратной связи по обмену по шине SPI
+
+    struct SXyz //
+    {
+        float x;
+        float y;
+        float z;
+    };
     struct SSpi
     {
         uint32_t all;
         uint32_t bed;
     };
-    struct SSpi spi; // Переменная где все данные по обмену
-
-    // Структура состояния мотора GIM4305 4310
-    struct SGim43
+    //****************************************************************************************************************************************************
+    // Структура управления движением
+    struct SControl
     {
-        float position;
-        float velocity;
-        float torque;
+        float speedL; // Скорость с которой нужно двигаться в оборотах/секунда !!!!!!!!!
+        float speedR; // Скорость с которой нужно двигаться в оборотах/секунда !!!!!!!!!!!!!!!!
     };
-    
 
-    // Структура в которой все главные переменные передаюся на высокий уровень от Print к Data
-    struct Struct_Print2Data
+    #define NUM_LEDS 43 // Колличество светодиодов всего
+
+    // Структура управления Светодиодами
+    struct SLed
     {
-        uint32_t id;                    // id команды
-        struct SFirmwarePrint firmware; // Версия прошики и использованного оборудования
-        struct SGim43 gim43;
-        struct SSpi spi;                // Структура по состоянию обмена по шине SPI
-
+        uint8_t led[NUM_LEDS]; // Маасив через который управляем светодиодами
+    };
+    // Структура получаемых данных от Data к контроллеру Driver
+    struct Struct_Data2Driver
+    {
+        uint32_t id;      // Номер команды по порядку
+        struct SControl control; // Структура управления машиной
+        struct SLed led;         // Управление светодиодами
         uint32_t cheksum; // Контрольная сумма данных в структуре
     };
 
-    struct Struct_Print2Data Print2Data_send;                            // Тут все переменные его характеризующие на низком уровне
-    static const uint16_t size_structura_send = sizeof(Print2Data_send); // Размер структуры с данными которые передаем
-    //static const uint16_t max_size_stuct = (size_structura_receive < size_structura_send) ? size_structura_send : size_structura_receive; // Какая из структур больше
+    struct Struct_Data2Driver Data2Driver_receive;                         // Экземпляр структуры получаемых данных
+    static const int size_structura_receive = sizeof(Data2Driver_receive); // Размер структуры с данными которые получаем
+
+    //*****************************************************************************************************************************************************
+    // Структура сосдержит всю информацию по мотору на основании данных энкодера
+    struct SMotor
+    {
+        uint32_t statusDriver; // Статус драйвера.Включен или выключен.Удерживаются колосеса или свободно катаются 1-выключен
+        float rpsEncodL;       // Реальная скорость вращения по енкодерам( обороты в секунду)
+        float rpsEncodR;       // Реальная скорость вращения по енкодерам( обороты в секунду)
+    };
+
+    struct SMpu // Структура с данными со всех датчиков, отправляем наверх
+    {
+        int32_t status; // статус состояния
+        float rate;     // частота работы датчика
+        struct SXyz angleEuler;
+        struct SXyz linear;
+    };
+
+    // Структура состояния датчика расстония
+    struct SSensor
+    {
+        int32_t status; // статус состояния
+        float distance; // расстояние до препятствия
+    };
+    // Отдельные структуры для каждой сущности
+    struct SMotor motor;
+    struct SMpu bno055; // Данные с датчика BNO055
+    struct SSensor laserL;
+    struct SSensor laserR;
+    struct SSensor uzi;
+    struct SSpi spi; // Структура по состоянию обмена по шине SPI
+
+    // Структура в которой все главные переменные передаюся на высокий уровень
+    struct Struct_Driver2Data
+    {
+        uint32_t id; // id команды
+        struct SMotor motor;
+        struct SMpu bno055; // Данные с датчика BNO055
+        struct SSensor laserL;
+        struct SSensor laserR;
+        struct SSensor uzi;
+        struct SSpi spi;             // Структура по состоянию обмена по шине SPI
+        uint32_t cheksum; // Контрольная сумма данных в структуре
+    };
+
+    struct Struct_Driver2Data Driver2Data_send;                                                                                           // Тело робота. тут все переменные его характеризующие на низком уровне
+    static const int size_structura_send = sizeof(Driver2Data_send);                                                                      // Размер структуры с данными которые передаем
+    // static const uint16_t max_size_stuct = (size_structura_receive < size_structura_send) ? size_structura_send : size_structura_receive; // Какая из структур больше
 
 #ifdef __cplusplus
 }

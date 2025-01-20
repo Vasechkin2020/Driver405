@@ -93,6 +93,7 @@ void workingTimer() // Отработка действий по таймеру �
         // DEBUG_PRINTF("50msec %li \r\n", millis());
         //  flag_data = true; // Есть новые данные по шине // РУчной вариант имитации пришедших данных с частотой 20Гц
         // HAL_GPIO_TogglePin(Led1_GPIO_Port, Led1_Pin); // Инвертирование состояния выхода.
+        // HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin); // Инвертирование состояния выхода.
     }
 
     //----------------------------- 1 секунда --------------------------------------
@@ -111,7 +112,6 @@ void workingTimer() // Отработка действий по таймеру �
         // {
         //     // DEBUG_PRINTF("Timer HAL_SPI_STATE_BUSY_TX_RX %u \n", statusGetState);
         // }
-        // HAL_GPIO_TogglePin(Led1_GPIO_Port, Led1_Pin); // Инвертирование состояния выхода.
         DEBUG_PRINTF("%li \r\n", millis());
         //  uint8_t UART1_rxBuffer[4] = {0xAA,0xFF,0xAA,0xFF};
         //   uint8_t UART1_rxBuffer[1] = {0x56}; //Запрос версии "V"
@@ -123,26 +123,26 @@ void workingTimer() // Отработка действий по таймеру �
 // Собираем нужные данные и пишем в структуру на отправку
 void collect_Data_for_Send()
 {
-    Print2Data_send.id++;
-    // Print2Data_send.firmware  Заполняем при старете
-    Print2Data_send.spi = spi;
+    Driver2Data_send.id++;
+    // Driver2Data_send.firmware  Заполняем при старете
+    Driver2Data_send.spi = spi;
 
     uint32_t cheksum_send = 0;                                          // Считаем контрольную сумму отправляемой структуры
-    unsigned char *adr_structura = (unsigned char *)(&Print2Data_send); // Запоминаем адрес начала структуры. Используем для побайтной передачи
-    for (int i = 0; i < sizeof(Print2Data_send) - 4; i++)
+    unsigned char *adr_structura = (unsigned char *)(&Driver2Data_send); // Запоминаем адрес начала структуры. Используем для побайтной передачи
+    for (int i = 0; i < sizeof(Driver2Data_send) - 4; i++)
     {
         cheksum_send += adr_structura[i]; // Побайтно складываем все байты структуры кроме последних 4 в которых переменная в которую запишем результат
     }
-    Print2Data_send.cheksum = cheksum_send;
+    Driver2Data_send.cheksum = cheksum_send;
 
-    // Print2Data_send.cheksum = 0x1A1B1C1D;
-    // DEBUG_PRINTF(" id= %0#6lX cheksum_send =  %0#6lX \n", Print2Data_send.id, Print2Data_send.cheksum);
-    // Print2Data_send.cheksum = measureCheksum_Print2Data(Print2Data_send); // Вычисляем контрольную сумму структуры и пишем ее значение в последний элемент
+    // Driver2Data_send.cheksum = 0x1A1B1C1D;
+    // DEBUG_PRINTF(" id= %0#6lX cheksum_send =  %0#6lX \n", Driver2Data_send.id, Driver2Data_send.cheksum);
+    // Driver2Data_send.cheksum = measureCheksum_Print2Data(Driver2Data_send); // Вычисляем контрольную сумму структуры и пишем ее значение в последний элемент
 
     // копировнаие данных из моей уже заполненной структуры в буфер для DMA
     memset(txBuffer, 0, sizeof(txBuffer));                                          // Очистка буфера
-    struct Struct_Print2Data *copy_txBuffer = (struct Struct_Print2Data *)txBuffer; // Создаем переменную в которую пишем адрес буфера в нужном формате
-    *copy_txBuffer = Print2Data_send;                                               // Копируем данные
+    struct Struct_Driver2Data *copy_txBuffer = (struct Struct_Driver2Data *)txBuffer; // Создаем переменную в которую пишем адрес буфера в нужном формате
+    *copy_txBuffer = Driver2Data_send;                                               // Копируем данные
 
     // *******************************************************
     statusGetState = HAL_SPI_GetState(&hspi1);
@@ -197,7 +197,7 @@ void workingSPI()
         // DEBUG_PRINTF("+\n");
         processingDataReceive(); // Обработка пришедших данных после состоявшегося обмена  !!! Подумать почему меняю данные даже если они с ошибкой, потом по факту когда будет все работать
         // DEBUG_PRINTF(" mode= %i \n",Data2Print_receive.controlMotor.mode);
-        executeDataReceive(); // Выполнение пришедших команд
+        // executeDataReceive(); // Выполнение пришедших команд
 
         // DEBUG_PRINTF(" Receive id= %i cheksum= %i command= %i ", Data2Print_receive.id, Data2Print_receive.cheksum,Data2Print_receive.command );
         // DEBUG_PRINTF("start = ");
@@ -226,9 +226,9 @@ void workingSPI()
 // Заполнение данными Прошивки
 void initFirmware()
 {
-    Print2Data_send.firmware.gen = 1;
-    Print2Data_send.firmware.ver = 2;
-    Print2Data_send.firmware.debug = DEBUG;
-    Print2Data_send.firmware.test = 0x1A;
+    // Driver2Data_send.firmware.gen = 1;
+    // Driver2Data_send.firmware.ver = 2;
+    // Driver2Data_send.firmware.debug = DEBUG;
+    // Driver2Data_send.firmware.test = 0x1A;
 }
 #endif /*CODE_H*/

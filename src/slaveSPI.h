@@ -6,17 +6,16 @@
 #include "dma.h"
 #include "spi.h"
 
+#define BUFFER_SIZE 84 // Размер буфера который передаем. Следить что-бы структуры не превышали этот размер Кратно 32 делать
+// uint8_t txBuffer[BUFFER_SIZE] = {0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xA0}; // = "Hello from STM32 Slave"; // Передающий буфер
+
+uint8_t txBuffer[BUFFER_SIZE] = {0}; // = "Hello from STM32 Slave"; // Передающий буфер
+uint8_t rxBuffer[BUFFER_SIZE];       // Принимающий буфер
+
 u_int64_t timeSpi = 0; // Время когда пришла команда по SPI
 
 extern SPI_HandleTypeDef hspi1;
 volatile bool flag_data = false; // Флаг что данные передались
-
-// #define BUFFER_SIZE 10 // Размер буфера который передаем. Следить что-бы структуры не превышали этот размер Кратно 32 делать
-// uint8_t txBuffer[BUFFER_SIZE] = {0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xA0}; // = "Hello from STM32 Slave"; // Передающий буфер
-
-#define BUFFER_SIZE 32              // Размер буфера который передаем. Следить что-бы структуры не превышали этот размер Кратно 32 делать
-uint8_t txBuffer[BUFFER_SIZE] = {0}; // = "Hello from STM32 Slave"; // Передающий буфер
-uint8_t rxBuffer[BUFFER_SIZE];       // Принимающий буфер
 
 //********************** ОБЯВЛЕНИЕ ФУНКЦИЙ ================================
 
@@ -29,7 +28,7 @@ void processingDataReceive();                           // Обработка п
 //********************** РЕАЛИЗАЦИЯ ФУНКЦИЙ ================================
 
 // Функция возвращает контрольную сумму структуры без последних 4 байтов
-uint32_t measureCheksum_Data2Print(const struct Struct_Data2Print *structura_)
+uint32_t measureCheksum_Data2Driver(const struct Struct_Data2Driver *structura_)
 {
     uint32_t ret = 0;
     unsigned char *adr_structura = (unsigned char *)(structura_); // Запоминаем адрес начала структуры. Используем для побайтной передачи
@@ -40,7 +39,7 @@ uint32_t measureCheksum_Data2Print(const struct Struct_Data2Print *structura_)
     return ret;
 }
 // Функция возвращает контрольную сумму структуры без последних 4 байтов
-uint32_t measureCheksum_Print2Data(const struct Struct_Print2Data *structura_)
+uint32_t measureCheksum_Driver2Data(const struct Struct_Driver2Data *structura_)
 {
     uint32_t ret = 0;
     unsigned char *adr_structura = (unsigned char *)(structura_); // Запоминаем адрес начала структуры. Используем для побайтной передачи
@@ -147,29 +146,40 @@ void processingDataReceive()
     // struct STest *copy_rxBuffer = (struct STest *)rxBuffer; // Создаем переменную в которую пишем адрес буфера в нужном формате
     // StructTestPSpi_temp = *copy_rxBuffer;                   // Копируем из этой перемнной данные в мою структуру
 
-    struct Struct_Data2Print Data2Print_receive_temp;                               // Экземпляр структуры получаемых данных временный, пока не посчитаем контроьную сумму и убедимся что данные хорошие
-    struct Struct_Data2Print *copy_rxBuffer = (struct Struct_Data2Print *)rxBuffer; // Создаем переменную в которую пишем адрес буфера в нужном формате
-    Data2Print_receive_temp = *copy_rxBuffer;                                       // Копируем из этой перемнной данные в мою структуру
+    struct Struct_Data2Driver Data2Driver_receive_temp;                               // Экземпляр структуры получаемых данных временный, пока не посчитаем контроьную сумму и убедимся что данные хорошие
+    struct Struct_Data2Driver *copy_rxBuffer = (struct Struct_Data2Driver *)rxBuffer; // Создаем переменную в которую пишем адрес буфера в нужном формате
+    Data2Driver_receive_temp = *copy_rxBuffer;                                        // Копируем из этой перемнной данные в мою структуру
 
-    uint32_t cheksum_receive = 0; // = measureCheksum(Data2Print_receive_temp);             // Считаем контрольную сумму пришедшей структуры
+    uint32_t cheksum_receive = 0; // = measureCheksum(Data2Driver_receive_temp);             // Считаем контрольную сумму пришедшей структуры
 
     // unsigned char *adr_structura = (unsigned char *)(&StructTestPSpi_temp); // Запоминаем адрес начала структуры. Используем для побайтной передачи
 
-    unsigned char *adr_structura = (unsigned char *)(&Data2Print_receive_temp); // Запоминаем адрес начала структуры. Используем для побайтной передачи
-    for (int i = 0; i < sizeof(Data2Print_receive_temp) - 4; i++)
+    unsigned char *adr_structura = (unsigned char *)(&Data2Driver_receive_temp); // Запоминаем адрес начала структуры. Используем для побайтной передачи
+    for (int i = 0; i < sizeof(Data2Driver_receive_temp) - 4; i++)
     {
         cheksum_receive += adr_structura[i]; // Побайтно складываем все байты структуры кроме последних 4 в которых переменная в которую запишем результат
     }
 
-    if (cheksum_receive != Data2Print_receive_temp.cheksum || Data2Print_receive_temp.cheksum == 0) // Стравниваю что сам посчитал и что прислали. Не сходится или ноль - значит плохие данные
+    if (cheksum_receive != Data2Driver_receive_temp.cheksum || Data2Driver_receive_temp.cheksum == 0) // Стравниваю что сам посчитал и что прислали. Не сходится или ноль - значит плохие данные
     {
         spi.bed++; // Плохие данные
-        DEBUG_PRINTF("IN Data Err. \n");
+        // for (int i = 0; i < 8; i++)
+        // {
+        //     DEBUG_PRINTF("%#X ", adr_structura[i]);
+        // }
+        // DEBUG_PRINTF(" /// ");
+        // for (int i = 8; i < 12; i++)
+        // {
+        //     DEBUG_PRINTF("%#X ", adr_structura[i]);
+        // }
+        // DEBUG_PRINTF("||| %#x != %#x", cheksum_receive, Data2Driver_receive_temp.cheksum);
+        DEBUG_PRINTF(" IN Data Err. \n");
     }
     else
     {
-        Data2Print_receive = Data2Print_receive_temp; // Хорошие данные копируем
-        DEBUG_PRINTF("IN Data OK. \n");
+        Data2Driver_receive = Data2Driver_receive_temp; // Хорошие данные копируем
+        // DEBUG_PRINTF("%#x != %#x", cheksum_receive, Data2Driver_receive_temp.cheksum);
+        DEBUG_PRINTF(" IN Data OK. \n");
     }
     // DEBUG_PRINTF(" All= %lu bed= %lu \r\n", spi.all, spi.bed);
     // DEBUG_PRINTF("b1 = %#X b2 = %#X b3 = %#X b4 = %#X %.4f = ", StructTestPSpi_temp.byte0, StructTestPSpi_temp.byte1, StructTestPSpi_temp.byte2, StructTestPSpi_temp.byte3, StructTestPSpi_temp.fff);

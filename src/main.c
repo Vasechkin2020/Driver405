@@ -40,7 +40,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim7); // Таймер для моторов шаговых для датчиков
 
   initFirmware();
-  printf("\r\n *** printBIM.ru 2025. ***\r\n");
+  printf("\r\n *** Driver405 printBIM.ru 2025. ***\r\n");
   // printf("Firmware gen %hu ver %hu laser %hu motor %.1f debug %hu\n", Print2Data_send.firmware.gen, Print2Data_send.firmware.ver,Print2Data_send.firmware.laser,Print2Data_send.firmware.motor,Print2Data_send.firmware.debug);
 
   initSPI_slave();    //
