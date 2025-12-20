@@ -31,7 +31,7 @@ void MX_TIM7_Init(void)
   TIM_MasterConfigTypeDef sMasterConfig = {0};
 
   htim7.Instance = TIM7;
-  htim6.Init.Prescaler = 83; // 83+1 получается делитель для 168 МГц в 1 микросекунду делить в 2 раза
+  htim7.Init.Prescaler = 83; // 83+1 получается делитель для 168 МГц в 1 микросекунду делить в 2 раза
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 1000;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;

@@ -1,6 +1,17 @@
 
 #include "gpio.h"
 
+
+void MX_GPIO_Init_Only_Clock(void) // Инициализация тактирования GPIO
+{
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+}
+
+
 void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};

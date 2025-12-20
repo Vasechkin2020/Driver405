@@ -24,17 +24,25 @@ int main(void)
   HAL_Init();
   SystemClock_Config();
 
-  MX_GPIO_Init();
+  HAL_NVIC_SetPriority(SysTick_IRQn, 15, 0); // Принудительно ставим SysTick самый низкий приоритет (15)
 
-  MX_DMA_Init();
-
-  MX_SPI1_Init();
-  // HAL_Delay(50000);
-
+  MX_GPIO_Init_Only_Clock(); // Инициализация ТОЛЬКО тактирования GPIO
   MX_USART1_UART_Init();
 
-  MX_TIM6_Init();
-  MX_TIM7_Init();
+  HAL_Delay(3000); // Чтобы успеть подключиться терминалом
+  printf("\r\n *** Driver ver 1.0 20-12-25 *** printBIM.ru *** 2025 *** \r\n");
+
+  EnableFPU();    // Включение FPU (CP10 и CP11: полный доступ) Работа с плавающей точкой
+
+  MX_GPIO_Init(); // Инициализация GPIO
+
+  MX_DMA_Init(); // Инициализация DMA
+
+  MX_SPI1_Init(); // Инициализация SPI1
+  // HAL_Delay(50000);
+
+  MX_TIM6_Init(); // Инициализация TIM6 для общего цикла
+  MX_TIM7_Init(); // Инициализация TIM7 для моторов шаговых для датчиков
 
   HAL_TIM_Base_Start_IT(&htim6); // Таймер для общего цикла
   HAL_TIM_Base_Start_IT(&htim7); // Таймер для моторов шаговых для датчиков

@@ -108,24 +108,18 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
     }
 }
 
-extern void collect_Data_for_Send();
+extern void collect_Data_for_Send(bool restart);
 
 // Начальная инициализция для SPI
 void initSPI_slave()
 {
-    collect_Data_for_Send(); // Собираем данные для начальной отправки
+    // 1. Готовим данные для САМОЙ ПЕРВОЙ отправки (чтобы не слать нули)
+    collect_Data_for_Send(false); // false = не перезапускать DMA, просто заполнить буфер
 
-    // HAL_SPI_DMAStop(&hspi1);
-    // HAL_SPI_TransmitReceive_DMA(&hspi1, txBuffer, rxBuffer, BUFFER_SIZE); // Указываем какие данные отправлять и куда записывать полученные
+    __HAL_SPI_CLEAR_OVRFLAG(&hspi1);                                      // Добавляем очистку флагов перед стартом, чтобы убрать мусор
 
-    // const uint16_t size_structura_receive = sizeof(Data2Print_receive); // Размер структуры с данными которые получаем
-    // const uint16_t size_structura_send = sizeof(Print2Data_send);       // Размер структуры с данными которые передаем
-    // uint16_t max_size_stuct;
-    // max_size_stuct = 0;
-    // if (size_structura_receive < size_structura_send)
-    //     max_size_stuct = size_structura_send;
-    // else
-    //     max_size_stuct = size_structura_receive; // Какая из структур больше
+    // 2. Взводим курок в первый раз. Теперь STM32 готов и ждет, когда RPi начнет общение.
+    HAL_SPI_TransmitReceive_DMA(&hspi1, txBuffer, rxBuffer, BUFFER_SIZE);
 }
 
 // Обработка по флагу в main пришедших данных после срабатывания прерывания что обмен состоялся

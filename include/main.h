@@ -54,6 +54,7 @@ extern "C"
     {
         uint8_t led[NUM_LEDS]; // Маасив через который управляем светодиодами
     };
+
     // Структура получаемых данных от Data к контроллеру Driver
     struct Struct_Data2Driver
     {
@@ -89,6 +90,7 @@ extern "C"
         int32_t status; // статус состояния
         float distance; // расстояние до препятствия
     };
+    
     // Отдельные структуры для каждой сущности
     struct SMotor motor;
     struct SMpu bno055; // Данные с датчика BNO055

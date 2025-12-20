@@ -121,13 +121,15 @@ void workingTimer() // Отработка действий по таймеру �
 }
 
 // Собираем нужные данные и пишем в структуру на отправку
-void collect_Data_for_Send()
+// Аргумент restart:
+// false - только обновить данные в буфере (для инициализации)
+// true  - обновить данные И перезапустить DMA (для основного цикла)
+void collect_Data_for_Send(bool restart)
 {
     Driver2Data_send.id++;
-    // Driver2Data_send.firmware  Заполняем при старете
     Driver2Data_send.spi = spi;
 
-    uint32_t cheksum_send = 0;                                          // Считаем контрольную сумму отправляемой структуры
+    uint32_t cheksum_send = 0;                                           // Считаем контрольную сумму отправляемой структуры
     unsigned char *adr_structura = (unsigned char *)(&Driver2Data_send); // Запоминаем адрес начала структуры. Используем для побайтной передачи
     for (int i = 0; i < sizeof(Driver2Data_send) - 4; i++)
     {
@@ -135,49 +137,45 @@ void collect_Data_for_Send()
     }
     Driver2Data_send.cheksum = cheksum_send;
 
-    // Driver2Data_send.cheksum = 0x1A1B1C1D;
-    // DEBUG_PRINTF(" id= %0#6lX cheksum_send =  %0#6lX \n", Driver2Data_send.id, Driver2Data_send.cheksum);
-    // Driver2Data_send.cheksum = measureCheksum_Print2Data(Driver2Data_send); // Вычисляем контрольную сумму структуры и пишем ее значение в последний элемент
-
-    // копировнаие данных из моей уже заполненной структуры в буфер для DMA
-    memset(txBuffer, 0, sizeof(txBuffer));                                          // Очистка буфера
+    // копирование данных из моей уже заполненной структуры в буфер для DMA
+    memset(txBuffer, 0, sizeof(txBuffer));                                            // Очистка буфера
     struct Struct_Driver2Data *copy_txBuffer = (struct Struct_Driver2Data *)txBuffer; // Создаем переменную в которую пишем адрес буфера в нужном формате
-    *copy_txBuffer = Driver2Data_send;                                               // Копируем данные
+    *copy_txBuffer = Driver2Data_send;                                                // Копируем данные
 
-    // *******************************************************
-    statusGetState = HAL_SPI_GetState(&hspi1);
-    if (statusGetState == HAL_SPI_STATE_READY)
+    // 4. ПЕРЕЗАПУСК DMA (Только если попросили!)
+    if (restart)
     {
-        // DEBUG_PRINTF("SPI_GetState ok.\n");
-        ;
-    }
-    else
-        DEBUG_PRINTF("SPI_GetState ERROR %u ", statusGetState);
-
-    // HAL_SPI_DMAStop(&hspi1);
-    HAL_SPI_Abort(&hspi1);
-    status = HAL_SPI_TransmitReceive_DMA(&hspi1, txBuffer, rxBuffer, BUFFER_SIZE); // // Перезапуск функции для следующего обмена// Запуск обмена данными по SPI с использованием DMA                                       // Копируем из структуры данные в пвмять начиная с адреса в котором начинаяется буфер для передачи
-    if (status == HAL_OK)
-    {
-        // DEBUG_PRINTF("DMA OK \n");
-        ;
-    }
-    else
-    {
-        DEBUG_PRINTF("DMA ERROR \n");
         statusGetState = HAL_SPI_GetState(&hspi1);
         if (statusGetState == HAL_SPI_STATE_READY)
-            DEBUG_PRINTF("2SPI готов к передаче данных.\n");
+        {
+            // DEBUG_PRINTF("SPI_GetState ok.\n");
+            ;
+        }
         else
-            DEBUG_PRINTF("2HAL_SPI_GetState ERROR %u \n", statusGetState);
+            DEBUG_PRINTF("SPI_GetState ERROR %u ", statusGetState);
+
+        status = HAL_SPI_TransmitReceive_DMA(&hspi1, txBuffer, rxBuffer, BUFFER_SIZE); // // Перезапуск функции для следующего обмена// Запуск обмена данными по SPI с использованием DMA                                       // Копируем из структуры данные в пвмять начиная с адреса в котором начинаяется буфер для передачи
+        if (status == HAL_OK)
+        {
+            // DEBUG_PRINTF("DMA OK \n");
+            ;
+        }
+        else
+        {
+            DEBUG_PRINTF("DMA ERROR \n");
+            statusGetState = HAL_SPI_GetState(&hspi1);
+            if (statusGetState == HAL_SPI_STATE_READY)
+                DEBUG_PRINTF("2SPI ready to data transfer.\n");
+            else
+                DEBUG_PRINTF("2HAL_SPI_GetState ERROR %u \n", statusGetState);
+        }
     }
-    // *******************************************************
 }
 
 // Отработка пришедших команд. Исполнение.
 void executeDataReceive()
 {
-    //DEBUG_PRINTF("executeDataReceive... status= %lu mode= %lu ", Data2Print_receive.controlPrint.status, Data2Print_receive.controlPrint.mode);
+    // DEBUG_PRINTF("executeDataReceive... status= %lu mode= %lu ", Data2Print_receive.controlPrint.status, Data2Print_receive.controlPrint.mode);
 }
 
 // Отработка действий по обмену по шине SPI
@@ -189,8 +187,8 @@ void workingSPI()
     {
         // HAL_GPIO_WritePin(Analiz2_GPIO_Port, Analiz2_Pin, GPIO_PIN_SET); // Инвертирование состояния выхода.
         flag_data = false;
-        flagTimeOut = true;                           // Флаг для выключения по таймауту
-        timeSpi = millis();                           // Запоминаем время обмена
+        flagTimeOut = true;                         // Флаг для выключения по таймауту
+        timeSpi = millis();                         // Запоминаем время обмена
         HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin); // Инвертирование состояния выхода.
         // DEBUG_PRINTF ("In = %#x %#x %#x %#x \r\n",rxBuffer[0],rxBuffer[1],rxBuffer[2],rxBuffer[3]);
         // DEBUG_PRINTF ("Out = %#x %#x %#x %#x \r\n",txBuffer[0],txBuffer[1],txBuffer[2],txBuffer[3]);
@@ -206,7 +204,7 @@ void workingSPI()
         //     DEBUG_PRINTF(" %x", txBuffer[i]);
         // }
         // DEBUG_PRINTF("\n");
-        collect_Data_for_Send(); // Собираем данные в структуре для отправки на момент прихода команлы, но БЕЗ учета команды.До исполнения команды.
+        collect_Data_for_Send(true); // Собираем данные в структуре для отправки на момент прихода команлы, но БЕЗ учета команды.До исполнения команды.
 
         // DEBUG_PRINTF(" angle0= %.2f angle1= %.2f angle2= %.2f angle3= %.2f", Data2Print_receive.angle[0], Data2Print_receive.angle[1], Data2Print_receive.angle[2], Data2Print_receive.angle[3] );
 
@@ -231,4 +229,38 @@ void initFirmware()
     // Driver2Data_send.firmware.debug = DEBUG;
     // Driver2Data_send.firmware.test = 0x1A;
 }
+
+// Функция для включения FPU (Floating Point Unit) на STM32F4xx
+void EnableFPU(void)
+{
+    // Включение FPU (CP10 и CP11: полный доступ)
+    SCB->CPACR |= ((3UL << 20) | (3UL << 22)); // CP10 = 0b11, CP11 = 0b11
+
+    if ((SCB->CPACR & (0xF << 20)) != (0xF << 20))
+        printf("FPU отключена!\n");
+    else
+        printf("FPU включена!\n");
+
+    uint32_t cpacr = SCB->CPACR; // Чтение регистра CPACR
+    if ((cpacr & ((3UL << 20) | (3UL << 22))) == ((3UL << 20) | (3UL << 22)))
+        printf("FPU2 включён\n");
+    else
+        printf("FPU2 отключён\n");
+
+    float result = 0.0f;
+    uint32_t start = HAL_GetTick();
+    for (int i = 0; i < 10000; i++)
+    {
+        result += sinf((float)i / 100.0f);
+        result += tanf((float)i / 100.0f);
+    }
+    uint32_t end = HAL_GetTick();
+    uint32_t rez = end - start;
+    printf("Time: %lu ms, Result: %f\n", rez, result);
+    if (rez > 100)
+        printf(" SOFT FPU !!!\n");
+    else
+        printf(" +++ HARD FPU !!!\n");
+}
+
 #endif /*CODE_H*/

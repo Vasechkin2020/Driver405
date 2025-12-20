@@ -8,6 +8,7 @@ extern "C" {
 
 #include "main.h"
 
+void MX_GPIO_Init_Only_Clock(void); // Инициализация тактирования GPIO
 void MX_GPIO_Init(void);
 
 #ifdef __cplusplus
