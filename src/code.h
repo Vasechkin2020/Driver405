@@ -189,7 +189,7 @@ void workingSPI()
         flag_data = false;
         flagTimeOut = true;                         // Флаг для выключения по таймауту
         timeSpi = millis();                         // Запоминаем время обмена
-        HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin); // Инвертирование состояния выхода.
+        // HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin); // Инвертирование состояния выхода.
         // DEBUG_PRINTF ("In = %#x %#x %#x %#x \r\n",rxBuffer[0],rxBuffer[1],rxBuffer[2],rxBuffer[3]);
         // DEBUG_PRINTF ("Out = %#x %#x %#x %#x \r\n",txBuffer[0],txBuffer[1],txBuffer[2],txBuffer[3]);
         // DEBUG_PRINTF("+\n");

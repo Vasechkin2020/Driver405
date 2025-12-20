@@ -57,10 +57,20 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define Led_Pin GPIO_PIN_3
-#define Led_GPIO_Port GPIOC
-#define Analiz_Pin GPIO_PIN_9
-#define Analiz_GPIO_Port GPIOC
+#define En_Motor_Pin GPIO_PIN_14
+#define En_Motor_GPIO_Port GPIOC
+#define Dir_Motor0_Pin GPIO_PIN_15
+#define Dir_Motor0_GPIO_Port GPIOC
+#define Step_Motor0_Pin GPIO_PIN_0
+#define Step_Motor0_GPIO_Port GPIOC
+#define Step_Motor1_Pin GPIO_PIN_5
+#define Step_Motor1_GPIO_Port GPIOC
+#define Dir_Motor1_Pin GPIO_PIN_0
+#define Dir_Motor1_GPIO_Port GPIOB
+#define Analiz_1_Pin GPIO_PIN_8
+#define Analiz_1_GPIO_Port GPIOC
+#define Analiz_0_Pin GPIO_PIN_9
+#define Analiz_0_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
 
