@@ -21,7 +21,8 @@ uint32_t timeCAN = 0;
 GPIO_TypeDef *myPort;
 
 void timer6();       // Обработчик прерывания таймера TIM6	1 раз в 1 милисекунду
-void timer7();       // Обработчик прерывания таймера TIM7	1 раз в 1 милисекунду
+
+
 void workingTimer(); // Отработка действий по таймеру в 1, 50, 60 милисекунд
 void workingSPI();   // Отработка действий по обмену по шине SPI
 void initFirmware(); // Заполнение данными прошивки
@@ -40,9 +41,7 @@ uint32_t millis()
     return millisCounter;
 }
 
-void timer7() // Обработчик прерывания таймера TIM7
-{
-}
+
 void timer6() // Обработчик прерывания таймера TIM6	1 раз в 1 милисекунду
 {
     static int count_timer_10millisec = 0; // Счетчик для запуска обработки движения моторов в лупе по флагу
@@ -187,8 +186,8 @@ void workingSPI()
     {
         // HAL_GPIO_WritePin(Analiz2_GPIO_Port, Analiz2_Pin, GPIO_PIN_SET); // Инвертирование состояния выхода.
         flag_data = false;
-        flagTimeOut = true;                         // Флаг для выключения по таймауту
-        timeSpi = millis();                         // Запоминаем время обмена
+        flagTimeOut = true; // Флаг для выключения по таймауту
+        timeSpi = millis(); // Запоминаем время обмена
         // HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin); // Инвертирование состояния выхода.
         // DEBUG_PRINTF ("In = %#x %#x %#x %#x \r\n",rxBuffer[0],rxBuffer[1],rxBuffer[2],rxBuffer[3]);
         // DEBUG_PRINTF ("Out = %#x %#x %#x %#x \r\n",txBuffer[0],txBuffer[1],txBuffer[2],txBuffer[3]);

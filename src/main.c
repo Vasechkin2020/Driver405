@@ -15,6 +15,7 @@
 
 #include "code.h"
 #include "slaveSPI.h"
+#include "motor.h"
 
 void SystemClock_Config(void);
 volatile uint32_t millisCounter = 0;
@@ -46,7 +47,9 @@ int main(void)
   MX_TIM13_Init(); // Инициализация TIM13 для второго мотора шагового ПРАВЫЙ
 
   HAL_TIM_Base_Start_IT(&htim6); // Таймер для общего цикла
-  HAL_TIM_Base_Start_IT(&htim7); // Таймер для моторов шаговых для датчиков
+
+  initMotor(); // Инициализация моторов
+  
 
   initFirmware();
   printf("\r\n *** Driver405 printBIM.ru 2025. ***\r\n");
