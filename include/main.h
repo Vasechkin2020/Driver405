@@ -26,6 +26,11 @@ extern "C"
 #define Analiz_0_Pin GPIO_PIN_9
 #define Analiz_0_GPIO_Port GPIOC
 
+#define SCL_Pin GPIO_PIN_6
+#define SCL_GPIO_Port GPIOB
+#define SDA_Pin GPIO_PIN_7
+#define SDA_GPIO_Port GPIOB
+
     // Установите DEBUG для включения отладочной информации
 #define DEBUG 1 // Поставьте 0 для отключения отладочной информации
 

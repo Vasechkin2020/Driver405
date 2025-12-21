@@ -8,6 +8,7 @@
 #include "main.h"
 #include "dma.h"
 #include "spi.h"
+#include "i2c.h"
 
 #include "tim.h"
 #include "usart.h"
@@ -49,6 +50,8 @@ int main(void)
   MX_TIM13_Init(); // Инициализация TIM13 для второго мотора шагового ПРАВЫЙ
 
   HAL_TIM_Base_Start_IT(&htim6); // Таймер для общего цикла
+
+  MX_I2C1_Init(); // Инициализация I2C1
 
   initMotor(); // Инициализация моторов
   
