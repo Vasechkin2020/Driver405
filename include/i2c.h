@@ -13,6 +13,8 @@ extern I2C_HandleTypeDef hi2c1;
 
 void MX_I2C1_Init(void);
 
+void Scan_I2C_Universal(void); // Запуск умного сканирования
+
 #ifdef __cplusplus
 }
 #endif

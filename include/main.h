@@ -8,6 +8,7 @@ extern "C"
 #endif
 
 #include "stm32f4xx_hal.h"
+#include <stdio.h> // <--- ДОБАВИТЬ ВОТ ЭТО для printf
 
     void Error_Handler(void);
 

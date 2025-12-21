@@ -1,5 +1,6 @@
 
 #include "i2c.h"
+#include <stdio.h> // <--- ДОБАВИТЬ ВОТ ЭТО для printf
 
 I2C_HandleTypeDef hi2c1;
 
@@ -60,4 +61,90 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
     HAL_GPIO_DeInit(SDA_GPIO_Port, SDA_Pin);
   }
+}
+
+//*****************************************************************************************************
+
+// Адрес мультиплексора TCA9548A (7-бит: 0x70 -> 8-бит: 0xE0)
+#define TCA9548A_ADDR (0x70 << 1) 
+
+// Вспомогательная функция переключения канала
+static uint8_t TCA9548A_SelectChannel(uint8_t channel)
+{
+    if (channel > 7) return 0;
+    
+    uint8_t data = (1 << channel); // Бит соответствует каналу
+    // Отправляем 1 байт с битовой маской
+    HAL_StatusTypeDef res = HAL_I2C_Master_Transmit(&hi2c1, TCA9548A_ADDR, &data, 1, 10);
+    
+    return (res == HAL_OK);
+}
+
+// Вспомогательная функция сканирования текущей активной шины
+static void Scan_Segment(char *segment_name)
+{
+    printf("--- Scanning: %s ---\r\n", segment_name);
+    int found = 0;
+
+    // Сканируем стандартные адреса (0x08 ... 0x77)
+    for (uint16_t addr = 0x08; addr < 0x78; addr++)
+    {
+        // Не сканируем сам мультиплексор во избежание путаницы, 
+        // хотя он будет виден на всех каналах
+        if (addr == 0x70) continue; 
+
+        // Проверяем устройство (Trials=1, Timeout=10ms)
+        if (HAL_I2C_IsDeviceReady(&hi2c1, (addr << 1), 1, 10) == HAL_OK)
+        {
+            printf("  [0x%02X] Device Found!\r\n", addr);
+            found++;
+        }
+    }
+
+    if (found == 0) printf("  No devices.\r\n");
+}
+
+// ГЛАВНАЯ УНИВЕРСАЛЬНАЯ ФУНКЦИЯ
+void Scan_I2C_Universal(void)
+{
+    printf("\r\n=== I2C BUS SCANNER START ===\r\n");
+
+    // 1. Проверяем наличие мультиплексора
+    HAL_StatusTypeDef mux_status = HAL_I2C_IsDeviceReady(&hi2c1, TCA9548A_ADDR, 2, 10);
+
+    if (mux_status != HAL_OK)
+    {
+        // === ВАРИАНТ 1: Мультиплексора нет ===
+        printf("Multiplexer NOT found at 0x70. Scanning Main Bus only.\r\n");
+        Scan_Segment("Main Bus");
+    }
+    else
+    {
+        // === ВАРИАНТ 2: Мультиплексор найден ===
+        printf("Multiplexer FOUND at 0x70. Scanning Channels 0-7...\r\n");
+
+        for (uint8_t ch = 0; ch < 8; ch++)
+        {
+            char buff[16];
+            
+            // Переключаем канал
+            if (TCA9548A_SelectChannel(ch))
+            {
+                snprintf(buff, sizeof(buff), "Channel %d", ch);
+                // Небольшая задержка для стабилизации переключения (опционально)
+                HAL_Delay(1); 
+                Scan_Segment(buff);
+            }
+            else
+            {
+                printf("Error switching to Channel %d\r\n", ch);
+            }
+        }
+        
+        // В конце отключаем все каналы (пишем 0)
+        uint8_t off = 0;
+        HAL_I2C_Master_Transmit(&hi2c1, TCA9548A_ADDR, &off, 1, 10);
+    }
+
+    printf("=== I2C SCANNER END ===\r\n\r\n");
 }
