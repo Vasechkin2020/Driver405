@@ -35,7 +35,7 @@ void MX_TIM7_Init(void)
   htim7.Init.Prescaler = 83; // 83+1 получается делитель для 168 МГц в 1 микросекунду делить в 2 раза
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 1000;
-  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     Error_Handler();
@@ -55,7 +55,7 @@ void MX_TIM13_Init(void)
   htim13.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim13.Init.Period = 1000;
   htim13.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim13.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  htim13.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim13) != HAL_OK)
   {
     Error_Handler();

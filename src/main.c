@@ -14,8 +14,10 @@
 #include "gpio.h"
 
 #include "code.h"
-#include "slaveSPI.h"
 #include "motor.h"
+#include "slaveSPI.h"
+
+
 
 void SystemClock_Config(void);
 volatile uint32_t millisCounter = 0;

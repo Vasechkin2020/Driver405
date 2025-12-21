@@ -9,6 +9,11 @@
 
 #include "slaveSPI.h"
 
+extern void delayMotor(void); // <--- ВОТ ЭТОЙ СТРОЧКИ НЕ ХВАТАЛО
+extern void setSpeed_L(float rps);
+extern void setSpeed_R(float rps);
+extern void movementTime();
+extern void calcEncod(void); // Добавить прототип
 //********************************* ПЕРЕМЕННЫЕ ***************************************************************************
 
 bool flag_timer_10millisec = false;
@@ -20,12 +25,14 @@ uint32_t timeCAN = 0;
 
 GPIO_TypeDef *myPort;
 
-void timer6();       // Обработчик прерывания таймера TIM6	1 раз в 1 милисекунду
-
+void timer6(); // Обработчик прерывания таймера TIM6	1 раз в 1 милисекунду
 
 void workingTimer(); // Отработка действий по таймеру в 1, 50, 60 милисекунд
 void workingSPI();   // Отработка действий по обмену по шине SPI
 void initFirmware(); // Заполнение данными прошивки
+
+
+uint32_t time_last_valid_command = 0; // Время получения последней валидной команды движения
 
 HAL_StatusTypeDef status;
 HAL_SPI_StateTypeDef statusGetState;
@@ -40,7 +47,6 @@ uint32_t millis()
 {
     return millisCounter;
 }
-
 
 void timer6() // Обработчик прерывания таймера TIM6	1 раз в 1 милисекунду
 {
@@ -89,6 +95,9 @@ void workingTimer() // Отработка действий по таймеру �
     if (flag_timer_50millisec)
     {
         flag_timer_50millisec = false;
+        
+        movementTime(); // 1. Проверка безопасности (если RPi молчит - стоп)
+        delayMotor(); // Проверка простоя моторов
         // DEBUG_PRINTF("50msec %li \r\n", millis());
         //  flag_data = true; // Есть новые данные по шине // РУчной вариант имитации пришедших данных с частотой 20Гц
         // HAL_GPIO_TogglePin(Led1_GPIO_Port, Led1_Pin); // Инвертирование состояния выхода.
@@ -174,7 +183,32 @@ void collect_Data_for_Send(bool restart)
 // Отработка пришедших команд. Исполнение.
 void executeDataReceive()
 {
-    // DEBUG_PRINTF("executeDataReceive... status= %lu mode= %lu ", Data2Print_receive.controlPrint.status, Data2Print_receive.controlPrint.mode);
+    // Статическая переменная хранит предыдущее состояние, чтобы сравнивать
+    static struct SControl prevControl = {0.0f, 0.0f};
+
+    // 1. Управление МОТОРАМИ
+    // Проверяем: изменилась ли скорость ИЛИ скорость не нулевая
+    // Это оптимизация: если мы стоим (0,0) и приходит снова (0,0) - не дергаем функции лишний раз.
+    // Но если мы ехали, а пришло (0,0) - обязательно заходим внутрь, чтобы остановиться.
+    if (Data2Driver_receive.control.speedL != prevControl.speedL || 
+        Data2Driver_receive.control.speedR != prevControl.speedR ||
+        Data2Driver_receive.control.speedL != 0.0f ||
+        Data2Driver_receive.control.speedR != 0.0f)
+    {
+        // Обновляем таймер безопасности (Watchdog)
+        time_last_valid_command = millis(); 
+
+        // Применяем скорости
+        setSpeed_L(Data2Driver_receive.control.speedL);
+        setSpeed_R(Data2Driver_receive.control.speedR);
+    }
+    
+    // Запоминаем текущее состояние как "предыдущее"
+    prevControl = Data2Driver_receive.control;
+
+    // 2. Управление СВЕТОДИОДАМИ
+    // (Пока не реализовано, оставим место)
+    // led_update(Data2Driver_receive.led);
 }
 
 // Отработка действий по обмену по шине SPI
@@ -184,17 +218,18 @@ void workingSPI()
 #ifdef SPI_protocol
     if (flag_data) // Если обменялись данными
     {
+        HAL_GPIO_WritePin(Analiz_0_GPIO_Port, Analiz_0_Pin, 1); // Инвертирование состояния выхода.
         // HAL_GPIO_WritePin(Analiz2_GPIO_Port, Analiz2_Pin, GPIO_PIN_SET); // Инвертирование состояния выхода.
         flag_data = false;
         flagTimeOut = true; // Флаг для выключения по таймауту
         timeSpi = millis(); // Запоминаем время обмена
-        // HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin); // Инвертирование состояния выхода.
+        // HAL_GPIO_TogglePin(Analiz_0_GPIO_Port, Analiz_0_Pin); // Инвертирование состояния выхода.
         // DEBUG_PRINTF ("In = %#x %#x %#x %#x \r\n",rxBuffer[0],rxBuffer[1],rxBuffer[2],rxBuffer[3]);
         // DEBUG_PRINTF ("Out = %#x %#x %#x %#x \r\n",txBuffer[0],txBuffer[1],txBuffer[2],txBuffer[3]);
         // DEBUG_PRINTF("+\n");
         processingDataReceive(); // Обработка пришедших данных после состоявшегося обмена  !!! Подумать почему меняю данные даже если они с ошибкой, потом по факту когда будет все работать
         // DEBUG_PRINTF(" mode= %i \n",Data2Print_receive.controlMotor.mode);
-        // executeDataReceive(); // Выполнение пришедших команд
+        executeDataReceive(); // Выполнение пришедших команд
 
         // DEBUG_PRINTF(" Receive id= %i cheksum= %i command= %i ", Data2Print_receive.id, Data2Print_receive.cheksum,Data2Print_receive.command );
         // DEBUG_PRINTF("start = ");
@@ -203,6 +238,8 @@ void workingSPI()
         //     DEBUG_PRINTF(" %x", txBuffer[i]);
         // }
         // DEBUG_PRINTF("\n");
+        
+        calcEncod(); // 3. РАСЧЕТ ТЕЛЕМЕТРИИ (НОВОЕ)
         collect_Data_for_Send(true); // Собираем данные в структуре для отправки на момент прихода команлы, но БЕЗ учета команды.До исполнения команды.
 
         // DEBUG_PRINTF(" angle0= %.2f angle1= %.2f angle2= %.2f angle3= %.2f", Data2Print_receive.angle[0], Data2Print_receive.angle[1], Data2Print_receive.angle[2], Data2Print_receive.angle[3] );
@@ -215,7 +252,7 @@ void workingSPI()
         //     DEBUG_PRINTF(" %x", txBuffer[i]);
         // }
         // DEBUG_PRINTF("-----\n");
-        // HAL_GPIO_WritePin(Analiz2_GPIO_Port, Analiz2_Pin, GPIO_PIN_RESET); // Инвертирование состояния выхода.
+        HAL_GPIO_WritePin(Analiz_0_GPIO_Port, Analiz_0_Pin, 0); // Инвертирование состояния выхода.
     }
 #endif
 }
