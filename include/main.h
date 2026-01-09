@@ -22,6 +22,7 @@ extern "C"
 #define Step_Motor1_GPIO_Port GPIOC
 #define Dir_Motor1_Pin GPIO_PIN_0
 #define Dir_Motor1_GPIO_Port GPIOB
+
 #define Analiz_1_Pin GPIO_PIN_8
 #define Analiz_1_GPIO_Port GPIOC
 #define Analiz_0_Pin GPIO_PIN_9
@@ -31,6 +32,13 @@ extern "C"
 #define SCL_GPIO_Port GPIOB
 #define SDA_Pin GPIO_PIN_7
 #define SDA_GPIO_Port GPIOB
+
+#define Led_Red_Pin GPIO_PIN_12
+#define Led_Red_GPIO_Port GPIOB
+#define Led_Green_Pin GPIO_PIN_13
+#define Led_Green_GPIO_Port GPIOB
+#define Led_Blue_Pin GPIO_PIN_14
+#define Led_Blue_GPIO_Port GPIOB
 
     // Установите DEBUG для включения отладочной информации
 #define DEBUG 1 // Поставьте 0 для отключения отладочной информации
