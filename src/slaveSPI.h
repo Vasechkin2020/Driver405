@@ -6,15 +6,16 @@
 #include "dma.h"
 #include "spi.h"
 
-#define BUFFER_SIZE 84 // Размер буфера который передаем. Следить что-бы структуры не превышали этот размер Кратно 32 делать
+#define BUFFER_SIZE 96 // Размер буфера который передаем. Следить что-бы структуры не превышали этот размер Кратно 32 делать
 // uint8_t txBuffer[BUFFER_SIZE] = {0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xA0}; // = "Hello from STM32 Slave"; // Передающий буфер
 
 uint8_t txBuffer[BUFFER_SIZE] = {0}; // = "Hello from STM32 Slave"; // Передающий буфер
 uint8_t rxBuffer[BUFFER_SIZE];       // Принимающий буфер
 
-u_int64_t timeSpi = 0; // Время когда пришла команда по SPI
+uint32_t timeSpi = 0; // Время когда пришла команда по SPI
 
 extern SPI_HandleTypeDef hspi1;
+extern uint32_t millis();
 volatile bool flag_data = false; // Флаг что данные передались
 
 //********************** ОБЯВЛЕНИЕ ФУНКЦИЙ ================================
@@ -22,8 +23,8 @@ volatile bool flag_data = false; // Флаг что данные передал�
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi); // Обработчик прерывания при завершении обмена данных по DMA
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi);    // Обработка ошибок SPI
 void initSPI_slave();                                   // Начальная инициализция для SPI
-void spi_slave_queue_Send();                            // Функция в которой чистим буфер и закладываем данные на передачу в буфер
-void processingDataReceive();                           // Обработка по флагу в main пришедших данных после срабатывания прерывания что обмен состоялся
+// void spi_slave_queue_Send();                            // Функция в которой чистим буфер и закладываем данные на передачу в буфер
+void processingDataReceive(); // Обработка по флагу в main пришедших данных после срабатывания прерывания что обмен состоялся
 
 //********************** РЕАЛИЗАЦИЯ ФУНКЦИЙ ================================
 
@@ -86,10 +87,14 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
     if (hspi->ErrorCode & HAL_SPI_ERROR_OVR)
     {
         DEBUG_PRINTF("Ошибка: Overrun.\n");
-        // Сброс OVR: прочитать DR и SR
-        volatile uint32_t temp = hspi->Instance->DR;
-        temp = hspi->Instance->SR;
-        (void)temp;
+        // // Сброс OVR: прочитать DR и SR
+        // volatile uint32_t temp = hspi->Instance->DR;
+        // temp = hspi->Instance->SR;
+        // (void)temp;
+
+        // OVR блокирует SPI. Нужно его сбросить. Макрос __HAL_SPI_CLEAR_OVRFLAG делает чтение DR и SR регистров
+        __HAL_SPI_CLEAR_OVRFLAG(hspi);
+        DEBUG_PRINTF("Err: OVR fixed.\n");
     }
     if (hspi->ErrorCode & HAL_SPI_ERROR_DMA)
     {
@@ -106,6 +111,14 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
     {
         DEBUG_PRINTF("Ошибок нет.\n");
     }
+
+    // На всякий случай делаем Abort, чтобы сбросить состояние HAL
+    HAL_SPI_Abort(hspi);
+    DEBUG_PRINTF("HAL_SPI_Abort: На всякий случай делаем Abort, чтобы сбросить состояние HAL.\n");
+
+    // Перезапускаем
+    HAL_SPI_TransmitReceive_DMA(hspi, txBuffer, rxBuffer, BUFFER_SIZE);
+    DEBUG_PRINTF("HAL_SPI_TransmitReceive_DMA:После устранения ошибок.\n");
 }
 
 extern void collect_Data_for_Send(bool restart);
@@ -161,6 +174,15 @@ void processingDataReceive()
     if (cheksum_receive != Data2Driver_receive_temp.cheksum || Data2Driver_receive_temp.cheksum == 0) // Стравниваю что сам посчитал и что прислали. Не сходится или ноль - значит плохие данные
     {
         spi.bed++; // Плохие данные
+        DEBUG_PRINTF("IN Data Err. Exp: %lu, Got: %lu\n", Data2Driver_receive_temp.cheksum, cheksum_receive);
+        DEBUG_PRINTF("DUMP: "); // ВЫВОДИМ БАЙТЫ, ЧТОБЫ ПОНЯТЬ ПРИЧИНУ
+        for (int i = 0; i < BUFFER_SIZE; i++) // Мой буфер 96 байт
+        { 
+            DEBUG_PRINTF("%02X ", rxBuffer[i]);
+        }
+        DEBUG_PRINTF("\n");
+
+        // DEBUG_PRINTF(" IN Data Err. \n");
         // for (int i = 0; i < 8; i++)
         // {
         //     DEBUG_PRINTF("%#X ", adr_structura[i]);
@@ -171,13 +193,13 @@ void processingDataReceive()
         //     DEBUG_PRINTF("%#X ", adr_structura[i]);
         // }
         // DEBUG_PRINTF("||| %#x != %#x", cheksum_receive, Data2Driver_receive_temp.cheksum);
-        DEBUG_PRINTF(" IN Data Err. \n");
+        // Внутри processingDataReceive() или в workingSPI при ошибке:
     }
     else
     {
         Data2Driver_receive = Data2Driver_receive_temp; // Хорошие данные копируем
         // DEBUG_PRINTF("%#x != %#x", cheksum_receive, Data2Driver_receive_temp.cheksum);
-        DEBUG_PRINTF(" IN Data OK. \n");
+        DEBUG_PRINTF("%li msec | IN Data OK. \n", millis());
     }
     // DEBUG_PRINTF(" All= %lu bed= %lu \r\n", spi.all, spi.bed);
     // DEBUG_PRINTF("b1 = %#X b2 = %#X b3 = %#X b4 = %#X %.4f = ", StructTestPSpi_temp.byte0, StructTestPSpi_temp.byte1, StructTestPSpi_temp.byte2, StructTestPSpi_temp.byte3, StructTestPSpi_temp.fff);

@@ -36,6 +36,7 @@ int main(void)
 
   HAL_Delay(3000); // Чтобы успеть подключиться терминалом
   printf("\r\n *** Driver ver 1.0 20-12-25 *** printBIM.ru *** 2025 *** \r\n");
+  printf("\r\n *** Driver405 printBIM.ru 2025. ***\r\n");
 
   EnableFPU();    // Включение FPU (CP10 и CP11: полный доступ) Работа с плавающей точкой
 
@@ -59,13 +60,12 @@ int main(void)
   initMotor(); // Инициализация моторов
   
   initFirmware();
-  printf("\r\n *** Driver405 printBIM.ru 2025. ***\r\n");
   // printf("Firmware gen %hu ver %hu laser %hu motor %.1f debug %hu\n", Print2Data_send.firmware.gen, Print2Data_send.firmware.ver,Print2Data_send.firmware.laser,Print2Data_send.firmware.motor,Print2Data_send.firmware.debug);
 
   initSPI_slave();    //
   timeSpi = millis(); // Запоминаем время начала цикла
 
-  DEBUG_PRINTF("%lli LOOP !!!!!!!!!!!!!!!!!!!!!!!!!!! \r\n", timeSpi);
+  DEBUG_PRINTF("+++ LOOP !!!!!!!!!!!!!!!!!!!!!!!!!!! timeSpi= %lu \n", timeSpi);
   while (1)
   {
     workingSPI();   // Отработка действий по обмену по шине SPI

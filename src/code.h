@@ -114,7 +114,11 @@ void workingTimer() // Отработка действий по таймеру �
         HAL_GPIO_TogglePin(Led_Blue_GPIO_Port, Led_Blue_Pin); // Инвертирование состояния выхода.
         flag_timer_1sec = false;
 
-        DEBUG_PRINTF("%8li msec | INA219: %6.2f V | %6.2f mA | %6.2f mW\r\n", millis(), ina219_data.voltage_V, ina219_data.current_mA, ina219_data.power_mW); // 2. Выводим в терминал красиво Если датчик не подключен, выведет нули
+        // 2. Выводим в терминал красиво
+        DEBUG_PRINTF("%8li msec | INA219: %6.2f V  %6.2f mA  %6.2f mW | SPI all: %lu bed %lu \r\n", 
+                        millis(), 
+                        ina219_data.voltage_V, ina219_data.current_mA, ina219_data.power_mW,
+                        spi.all, spi.bed); 
 
         // statusGetState = HAL_SPI_GetState(&hspi1);
         // if (statusGetState == HAL_SPI_STATE_READY)
@@ -170,10 +174,13 @@ void collect_Data_for_Send(bool restart)
         else
             DEBUG_PRINTF("SPI_GetState ERROR %u ", statusGetState);
 
+        // === ВАЖНОЕ ДОБАВЛЕНИЕ: Очистка флага OVR ===  Если между пакетами проскочил мусор, этот флаг мог подняться. Если его не сбросить, HAL_SPI_TransmitReceive_DMA вернет HAL_ERROR.
+        __HAL_SPI_CLEAR_OVRFLAG(&hspi1);
+
         status = HAL_SPI_TransmitReceive_DMA(&hspi1, txBuffer, rxBuffer, BUFFER_SIZE); // // Перезапуск функции для следующего обмена// Запуск обмена данными по SPI с использованием DMA                                       // Копируем из структуры данные в пвмять начиная с адреса в котором начинаяется буфер для передачи
         if (status == HAL_OK)
         {
-            DEBUG_PRINTF("DMA OK \n");
+            // DEBUG_PRINTF("DMA OK \n");
             ;
         }
         else
@@ -231,13 +238,13 @@ void workingSPI()
         flag_data = false;
         flagTimeOut = true; // Флаг для выключения по таймауту
         timeSpi = millis(); // Запоминаем время обмена
+        calcEncod();                 // 3. РАСЧЕТ ТЕЛЕМЕТРИИ (НОВОЕ)
         // HAL_GPIO_TogglePin(Analiz_0_GPIO_Port, Analiz_0_Pin); // Инвертирование состояния выхода.
         // DEBUG_PRINTF ("In = %#x %#x %#x %#x \r\n",rxBuffer[0],rxBuffer[1],rxBuffer[2],rxBuffer[3]);
         // DEBUG_PRINTF ("Out = %#x %#x %#x %#x \r\n",txBuffer[0],txBuffer[1],txBuffer[2],txBuffer[3]);
         // DEBUG_PRINTF("+\n");
         processingDataReceive(); // Обработка пришедших данных после состоявшегося обмена  !!! Подумать почему меняю данные даже если они с ошибкой, потом по факту когда будет все работать
         // DEBUG_PRINTF(" mode= %i \n",Data2Print_receive.controlMotor.mode);
-        executeDataReceive(); // Выполнение пришедших команд
 
         // DEBUG_PRINTF(" Receive id= %i cheksum= %i command= %i ", Data2Print_receive.id, Data2Print_receive.cheksum,Data2Print_receive.command );
         // DEBUG_PRINTF("start = ");
@@ -247,9 +254,9 @@ void workingSPI()
         // }
         // DEBUG_PRINTF("\n");
 
-        calcEncod();                 // 3. РАСЧЕТ ТЕЛЕМЕТРИИ (НОВОЕ)
         collect_Data_for_Send(true); // Собираем данные в структуре для отправки на момент прихода команлы, но БЕЗ учета команды.До исполнения команды.
 
+        executeDataReceive(); // Выполнение пришедших команд
         // DEBUG_PRINTF(" angle0= %.2f angle1= %.2f angle2= %.2f angle3= %.2f", Data2Print_receive.angle[0], Data2Print_receive.angle[1], Data2Print_receive.angle[2], Data2Print_receive.angle[3] );
 
         // spi_slave_queue_Send();  // Закладываем данные в буфер для передачи(обмена)
