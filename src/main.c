@@ -53,13 +53,11 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim6); // Таймер для общего цикла
 
   MX_I2C1_Init(); // Инициализация I2C1
- 
   Scan_I2C_Universal();  // Сканируем шину, чтобы убедиться, что INA219 (0x40) и Мультиплексор (0x70) видны
   INA219_Init(); // Инициализация INA219 (после старта I2C)
 
   initMotor(); // Инициализация моторов
   
-
   initFirmware();
   printf("\r\n *** Driver405 printBIM.ru 2025. ***\r\n");
   // printf("Firmware gen %hu ver %hu laser %hu motor %.1f debug %hu\n", Print2Data_send.firmware.gen, Print2Data_send.firmware.ver,Print2Data_send.firmware.laser,Print2Data_send.firmware.motor,Print2Data_send.firmware.debug);

@@ -116,10 +116,14 @@ void initSPI_slave()
     // 1. Готовим данные для САМОЙ ПЕРВОЙ отправки (чтобы не слать нули)
     collect_Data_for_Send(false); // false = не перезапускать DMA, просто заполнить буфер
 
-    __HAL_SPI_CLEAR_OVRFLAG(&hspi1);                                      // Добавляем очистку флагов перед стартом, чтобы убрать мусор
+    __HAL_SPI_CLEAR_OVRFLAG(&hspi1); // Добавляем очистку флагов перед стартом, чтобы убрать мусор
 
     // 2. Взводим курок в первый раз. Теперь STM32 готов и ждет, когда RPi начнет общение.
-    HAL_SPI_TransmitReceive_DMA(&hspi1, txBuffer, rxBuffer, BUFFER_SIZE);
+    HAL_StatusTypeDef status = HAL_SPI_TransmitReceive_DMA(&hspi1, txBuffer, rxBuffer, BUFFER_SIZE);
+    if (status == HAL_OK)
+    {
+        DEBUG_PRINTF("Start first DMA OK \n");
+    }
 }
 
 // Обработка по флагу в main пришедших данных после срабатывания прерывания что обмен состоялся

@@ -147,4 +147,5 @@ void Scan_I2C_Universal(void)
     }
 
     printf("=== I2C SCANNER END ===\r\n\r\n");
+    HAL_Delay(3000); // Небольшая задержка между сканированиями
 }

@@ -33,7 +33,6 @@ void workingTimer(); // Отработка действий по таймеру 
 void workingSPI();   // Отработка действий по обмену по шине SPI
 void initFirmware(); // Заполнение данными прошивки
 
-
 uint32_t time_last_valid_command = 0; // Время получения последней валидной команды движения
 
 HAL_StatusTypeDef status;
@@ -97,22 +96,26 @@ void workingTimer() // Отработка действий по таймеру �
     if (flag_timer_50millisec)
     {
         flag_timer_50millisec = false;
-        
-        movementTime(); // 1. Проверка безопасности (если RPi молчит - стоп)
-        delayMotor(); // Проверка простоя моторов
 
-       INA219_Read(); // Опрос INA219 (займет ~0.5 мс в блокирующем режиме, это допустимо)
+        movementTime(); // 1. Проверка безопасности (если RPi молчит - стоп)
+        delayMotor();   // Проверка простоя моторов
+
+        INA219_Read(); // Опрос INA219 (займет ~0.5 мс в блокирующем режиме, это допустимо)
 
         // DEBUG_PRINTF("50msec %li \r\n", millis());
         //  flag_data = true; // Есть новые данные по шине // РУчной вариант имитации пришедших данных с частотой 20Гц
-        // HAL_GPIO_TogglePin(Led1_GPIO_Port, Led1_Pin); // Инвертирование состояния выхода.
-        // HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin); // Инвертирование состояния выхода.
+        // HAL_GPIO_TogglePin(Led_Red_GPIO_Port, Led_Red_Pin);     // Инвертирование состояния выхода.
+        // HAL_GPIO_TogglePin(Led_Green_GPIO_Port, Led_Green_Pin); // Инвертирование состояния выхода.
     }
 
     //----------------------------- 1 секунда --------------------------------------
     if (flag_timer_1sec) // Вызывается каждую секунду
     {
+        HAL_GPIO_TogglePin(Led_Blue_GPIO_Port, Led_Blue_Pin); // Инвертирование состояния выхода.
         flag_timer_1sec = false;
+
+        DEBUG_PRINTF("%8li msec | INA219: %6.2f V | %6.2f mA | %6.2f mW\r\n", millis(), ina219_data.voltage_V, ina219_data.current_mA, ina219_data.power_mW); // 2. Выводим в терминал красиво Если датчик не подключен, выведет нули
+
         // statusGetState = HAL_SPI_GetState(&hspi1);
         // if (statusGetState == HAL_SPI_STATE_READY)
         // {
@@ -125,7 +128,7 @@ void workingTimer() // Отработка действий по таймеру �
         // {
         //     // DEBUG_PRINTF("Timer HAL_SPI_STATE_BUSY_TX_RX %u \n", statusGetState);
         // }
-        DEBUG_PRINTF("%li \r\n", millis());
+        // DEBUG_PRINTF("%li msec\r\n", millis());
         //  uint8_t UART1_rxBuffer[4] = {0xAA,0xFF,0xAA,0xFF};
         //   uint8_t UART1_rxBuffer[1] = {0x56}; //Запрос версии "V"
         //   uint8_t UART1_rxBuffer[1] = {0x4F}; // Включить лазер "O"
@@ -170,7 +173,7 @@ void collect_Data_for_Send(bool restart)
         status = HAL_SPI_TransmitReceive_DMA(&hspi1, txBuffer, rxBuffer, BUFFER_SIZE); // // Перезапуск функции для следующего обмена// Запуск обмена данными по SPI с использованием DMA                                       // Копируем из структуры данные в пвмять начиная с адреса в котором начинаяется буфер для передачи
         if (status == HAL_OK)
         {
-            // DEBUG_PRINTF("DMA OK \n");
+            DEBUG_PRINTF("DMA OK \n");
             ;
         }
         else
@@ -195,19 +198,19 @@ void executeDataReceive()
     // Проверяем: изменилась ли скорость ИЛИ скорость не нулевая
     // Это оптимизация: если мы стоим (0,0) и приходит снова (0,0) - не дергаем функции лишний раз.
     // Но если мы ехали, а пришло (0,0) - обязательно заходим внутрь, чтобы остановиться.
-    if (Data2Driver_receive.control.speedL != prevControl.speedL || 
+    if (Data2Driver_receive.control.speedL != prevControl.speedL ||
         Data2Driver_receive.control.speedR != prevControl.speedR ||
         Data2Driver_receive.control.speedL != 0.0f ||
         Data2Driver_receive.control.speedR != 0.0f)
     {
         // Обновляем таймер безопасности (Watchdog)
-        time_last_valid_command = millis(); 
+        time_last_valid_command = millis();
 
         // Применяем скорости
         setSpeed_L(Data2Driver_receive.control.speedL);
         setSpeed_R(Data2Driver_receive.control.speedR);
     }
-    
+
     // Запоминаем текущее состояние как "предыдущее"
     prevControl = Data2Driver_receive.control;
 
@@ -243,8 +246,8 @@ void workingSPI()
         //     DEBUG_PRINTF(" %x", txBuffer[i]);
         // }
         // DEBUG_PRINTF("\n");
-        
-        calcEncod(); // 3. РАСЧЕТ ТЕЛЕМЕТРИИ (НОВОЕ)
+
+        calcEncod();                 // 3. РАСЧЕТ ТЕЛЕМЕТРИИ (НОВОЕ)
         collect_Data_for_Send(true); // Собираем данные в структуре для отправки на момент прихода команлы, но БЕЗ учета команды.До исполнения команды.
 
         // DEBUG_PRINTF(" angle0= %.2f angle1= %.2f angle2= %.2f angle3= %.2f", Data2Print_receive.angle[0], Data2Print_receive.angle[1], Data2Print_receive.angle[2], Data2Print_receive.angle[3] );

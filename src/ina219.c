@@ -97,5 +97,5 @@ void INA219_Read(void)
     ina219_data.power_mW = raw_power * 2.0f;
     // ina219_data.power_mW = raw_power * 4.0f;     // <--- И ЗДЕСЬ  для 6,4 А
     
-    // printf("V=%.2f I=%.2f P=%.2f\n", ina219_data.voltage_V, ina219_data.current_mA, ina219_data.power_mW);
+    // printf("+++ Ina219 V=%7.2f I=%7.2f P=%7.2f\n", ina219_data.voltage_V, ina219_data.current_mA, ina219_data.power_mW);
 }
