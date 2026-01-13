@@ -67,6 +67,7 @@ void INA219_Read(void)
 {
     if (!ina219_data.connected) return; // Если датчика нет, не мучаем I2C
 
+    const float koef = 0.933; // Коэффициент для коррекции погрешности измерения тока и мощности
     int16_t raw_bus, raw_shunt, raw_current, raw_power;
 
     // 1. Читаем Bus Voltage (Регистр 0x02)
@@ -88,14 +89,14 @@ void INA219_Read(void)
     // 3. Читаем Current (Регистр 0x04)
     // Мы калибровали так, что Current LSB = 0.1 mA
     raw_current = INA219_ReadRegister(INA219_REG_CURRENT);
-    ina219_data.current_mA = raw_current * 0.1f; // 0.1mA на бит
-    // ina219_data.current_mA = raw_current * 0.2f; // <--- ИСПРАВИТЬ ЗДЕСЬ для 6,4 А
+    // ina219_data.current_mA = raw_current * 0.1f; // 0.1mA на бит
+    ina219_data.current_mA = raw_current * 0.2f * koef; // <--- ИСПРАВИТЬ ЗДЕСЬ для 6,4 А
 
     // 4. Читаем Power (Регистр 0x03)
     // Power LSB = 20 * Current LSB = 2 mW
     raw_power = INA219_ReadRegister(INA219_REG_POWER);
-    ina219_data.power_mW = raw_power * 2.0f;
-    // ina219_data.power_mW = raw_power * 4.0f;     // <--- И ЗДЕСЬ  для 6,4 А
+    // ina219_data.power_mW = raw_power * 2.0f;
+    ina219_data.power_mW = raw_power * 4.0f * koef;     // <--- И ЗДЕСЬ  для 6,4 А
     
     // printf("+++ Ina219 V=%7.2f I=%7.2f P=%7.2f\n", ina219_data.voltage_V, ina219_data.current_mA, ina219_data.power_mW);
 }

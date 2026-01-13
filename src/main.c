@@ -58,6 +58,7 @@ int main(void)
   INA219_Init(); // Инициализация INA219 (после старта I2C)
 
   initMotor(); // Инициализация моторов
+  testMotor(); // Тестирование правильности подключения моторов.
   
   initFirmware();
   // printf("Firmware gen %hu ver %hu laser %hu motor %.1f debug %hu\n", Print2Data_send.firmware.gen, Print2Data_send.firmware.ver,Print2Data_send.firmware.laser,Print2Data_send.firmware.motor,Print2Data_send.firmware.debug);

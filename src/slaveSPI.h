@@ -58,7 +58,7 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
     {
         // HAL_GPIO_WritePin(Analiz_GPIO_Port, Analiz_Pin, GPIO_PIN_SET); // Инвертирование состояния выхода.
         flag_data = true; // Флаг что обменялись данными. По этому флагу происходит обработка полученных данных и подготовка данных к следующей передаче
-        // DEBUG_PRINTF("-up-\n");
+        DEBUG_PRINTF("-up-\n");
         // HAL_GPIO_TogglePin(Led2_GPIO_Port, Led2_Pin);                    // Инвертирование состояния выхода.
         spi.all++; // Считаем сколько было обменов данными всего
         // HAL_GPIO_WritePin(Analiz_GPIO_Port, Analiz_Pin, GPIO_PIN_RESET); // Инвертирование состояния выхода.
@@ -199,7 +199,7 @@ void processingDataReceive()
     {
         Data2Driver_receive = Data2Driver_receive_temp; // Хорошие данные копируем
         // DEBUG_PRINTF("%#x != %#x", cheksum_receive, Data2Driver_receive_temp.cheksum);
-        DEBUG_PRINTF("%li msec | IN Data OK. \n", millis());
+        // DEBUG_PRINTF("%li msec | IN Data OK. \n", millis());
     }
     // DEBUG_PRINTF(" All= %lu bed= %lu \r\n", spi.all, spi.bed);
     // DEBUG_PRINTF("b1 = %#X b2 = %#X b3 = %#X b4 = %#X %.4f = ", StructTestPSpi_temp.byte0, StructTestPSpi_temp.byte1, StructTestPSpi_temp.byte2, StructTestPSpi_temp.byte3, StructTestPSpi_temp.fff);
